@@ -1,7 +1,16 @@
+
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Utensils, Award, Heart, Wine, Users, Sparkles } from "lucide-react";
+import {
+  Calendar,
+  Utensils,
+  Award,
+  Heart,
+  Wine,
+  Users,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { useReservation } from "./ReservationContext";
 
@@ -27,7 +36,7 @@ export default function Hero() {
           className="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-6"
         >
           <Sparkles className="w-4 h-4" />
-          <span>AA Rosette Awarded Gastronomy</span>
+          <span>Modern Australian Cuisine</span>
         </motion.div>
 
         <motion.h1
@@ -36,8 +45,10 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold text-white tracking-tight leading-tight mb-6"
         >
-          Modern British Cuisine &amp;{" "}
-          <span className="text-amber-400 italic font-normal">Authentic Hospitality</span>
+          A Taste Above the Rest
+          <span className="block text-amber-400 italic font-normal">
+            Served with a Smile
+          </span>
         </motion.h1>
 
         <motion.p
@@ -46,8 +57,9 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto mb-10 font-light leading-relaxed"
         >
-          Savor locally sourced British meats dry-aged in-house, day-boat seafood from Cornish
-          waters, and hand-crafted traditional desserts.
+          Discover modern Australian flavours at The Cheeky Chef.
+          Join us for a delicious breakfast, a relaxed lunch, or a
+          memorable dinner, all served with a smile.
         </motion.p>
 
         <motion.div
@@ -63,6 +75,7 @@ export default function Hero() {
             <Calendar className="w-5 h-5" />
             <span>Reserve Table</span>
           </button>
+
           <Link
             href="/menu"
             className="w-full sm:w-auto bg-slate-900/80 hover:bg-slate-800 text-slate-100 font-semibold px-8 py-4 rounded-xl border border-slate-700 transition-all flex items-center justify-center space-x-2 text-base backdrop-blur-sm"
@@ -75,22 +88,26 @@ export default function Hero() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 pt-8 border-t border-slate-800/80 text-slate-300 text-xs sm:text-sm">
           <div className="flex items-center justify-center space-x-2">
             <Award className="w-4 h-4 text-amber-400" />
-            <span>Michelin Recommended</span>
+            <span>Modern Australian</span>
           </div>
+
           <div className="flex items-center justify-center space-x-2">
             <Heart className="w-4 h-4 text-amber-400" />
-            <span>100% British Produce</span>
+            <span>Made with Care</span>
           </div>
+
           <div className="flex items-center justify-center space-x-2">
             <Wine className="w-4 h-4 text-amber-400" />
-            <span>Artisanal Wine Cellar</span>
+            <span>Great Food & Drinks</span>
           </div>
+
           <div className="flex items-center justify-center space-x-2">
             <Users className="w-4 h-4 text-amber-400" />
-            <span>Private Event Space</span>
+            <span>Breakfast to Dinner</span>
           </div>
         </div>
       </div>
     </section>
   );
 }
+

@@ -17,12 +17,12 @@ export default function UKHoursInfo() {
         <div className="flex items-center space-x-4">
           <span className="flex items-center space-x-1.5 text-slate-300">
             <MapPin className="w-3.5 h-3.5 text-amber-500" />
-            <span>High Street, Mayfair, London, UK</span>
+            <span>188 Ryrie st, Geelong, VIC, Australia, 3220</span>
           </span>
           <span className="hidden md:inline text-slate-700">|</span>
           <span className="hidden md:flex items-center space-x-1.5 text-slate-300">
             <Phone className="w-3.5 h-3.5 text-amber-500" />
-            <span>+44 (0)20 7946 0192</span>
+            <span>+61 431 464 422</span>
           </span>
         </div>
 

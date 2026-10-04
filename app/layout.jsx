@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ReservationProvider } from "@/components/ReservationContext";
@@ -13,17 +13,13 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "UK Dining — Modern British Restaurant (Demo)",
   description:
     "A demo restaurant website for a modern British restaurant in London, built with Next.js, Tailwind CSS, and Framer Motion. Not a real business.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children,}) {
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950`}>

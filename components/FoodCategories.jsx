@@ -6,22 +6,22 @@ import { ChevronRight } from "lucide-react";
 
 const CATEGORY_CARDS = [
   {
-    title: "Traditional Sunday Roast",
-    cat: "Sunday Roast",
-    img: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
-    desc: "Prime cuts served with giant Yorkshire puddings and duck-fat potatoes.",
+    title: "Chicken Parma",
+    cat: "Items",
+    img: "https://nishkitchen.com/wp-content/uploads/2024/05/Spicy-Chicken-parmesan-3.jpg",
+    desc: "Crispy golden chicken breast topped with rich tomato sauce, melted mozzarella cheese, and fresh herbs, served with chips and a crisp salad.",
   },
   {
-    title: "British Classic Mains",
+    title: "Beef lasagna" ,
     cat: "Mains",
-    img: "https://images.unsplash.com/photo-1579208030886-b937da0925dc?auto=format&fit=crop&q=80&w=800",
-    desc: "Beef Wellington, Ale-Battered Haddock, and Slow-Braised Shepherd's Pie.",
+    img: "https://www.allrecipes.com/thmb/J-IdbeLekaqvKl98d6vGuM-yU_s=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/19344-homemade-lasagna-VAT-Beauty-4x3-439ea61fe84048a4a4aacc7f7a275a4b.jpg",
+    desc: "Layers of tender pasta, rich slow-cooked beef and tomato sauce, creamy béchamel, and melted cheese, baked until golden and bubbling.",
   },
   {
-    title: "Afternoon Tea & Desserts",
-    cat: "Afternoon Tea",
-    img: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&q=80&w=800",
-    desc: "Finger sandwiches, freshly baked scones, and iconic Sticky Toffee Pudding.",
+    title: "Sourdough French Toast",
+    cat: "Breakfast",
+    img: "https://www.thelastfoodblog.com/wp-content/uploads/2020/01/Sourdough-French-Toast-side-on.jpg",
+    desc: "Layers of tender pasta, rich slow-cooked beef and tomato sauce, creamy béchamel, and melted cheese, baked until golden and bubbling.",
   },
 ];
 
