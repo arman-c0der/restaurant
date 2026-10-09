@@ -4,8 +4,8 @@
   "private": true,
   "description": "Modern British restaurant website (demo) — Next.js, Tailwind, Framer Motion, split into components.",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+   "dev": "next dev --webpack",
+"build": "next build --webpack",
     "start": "next start",
     "create-admin": "node scripts/create-admin.js"
   },
