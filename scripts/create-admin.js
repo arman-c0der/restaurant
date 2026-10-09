@@ -47,10 +47,7 @@ async function createAdmin() {
       role: "admin",
     });
 
-    console.log("Admin created successfully.");
-    console.log("Email:", email);
-    console.log("Password:", password);
-
+   
     process.exit(0);
   } catch (error) {
     console.error(error);

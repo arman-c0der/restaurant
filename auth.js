@@ -1,11 +1,10 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-
 import bcrypt from "bcryptjs";
-import  dbConnect  from "@/lib/dbConnect";
+import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   providers: [
     Credentials({
       credentials: {
@@ -14,32 +13,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
 
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        const email = String(credentials?.email || "").toLowerCase().trim();
+        const password = String(credentials?.password || "");
+
+        if (!email || !password) return null;
 
         await dbConnect();
 
-        const user = await User.findOne({
-          email: credentials.email.toLowerCase(),
-        });
+        const user = await User.findOne({ email });
+        if (!user) return null;
 
-        if (!user) {
-          return null;
-        }
+        // Shudhu admin login korte parbe
+        if (user.role !== "admin") return null;
 
-        if (user.role !== "admin") {
-          return null;
-        }
-
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!passwordMatch) {
-          return null;
-        }
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) return null;
 
         return {
           id: user._id.toString(),
@@ -52,10 +40,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+      }
+
+      // Settings e name change korle session update hobe
+      if (trigger === "update" && session?.user?.name) {
+        token.name = session.user.name;
       }
 
       return token;
@@ -66,12 +59,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id;
         session.user.role = token.role;
       }
-
       return session;
     },
 
+    // Middleware e use hole: shudhu admin role e allow
     async authorized({ auth }) {
-      return !!auth?.user;
+      return auth?.user?.role === "admin";
     },
   },
 

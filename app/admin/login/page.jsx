@@ -1,23 +1,34 @@
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminLoginForm from "./components/AdminLoginForm";
 
-export default async function AdminLayout({ children }) {
+export const metadata = {
+  title: "Admin sign in",
+};
+
+export default async function AdminLoginPage() {
   const session = await auth();
 
-  if (!session?.user || session.user.role !== "admin") {
-    redirect("/admin/login");
-  }
-
-  async function handleSignOut() {
-    "use server";
-    await signOut({ redirectTo: "/admin/login" });
+  if (session?.user?.role === "admin") {
+    redirect("/admin");
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100 md:flex-row">
-      <AdminSidebar user={session.user} signOutAction={handleSignOut} />
-      <main className="flex-1 overflow-x-hidden p-5 sm:p-8">{children}</main>
-    </div>
+    <main className="flex min-h-screen items-center justify-center px-4 pb-12 pt-28">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Admin sign in
+          </h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Sign in to manage reservations, menu and content.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur sm:p-8">
+          <AdminLoginForm />
+        </div>
+      </div>
+    </main>
   );
 }
