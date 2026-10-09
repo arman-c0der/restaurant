@@ -1,22 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, Filter, ShieldAlert, ChevronRight } from "lucide-react";
-import { MENU_DATA, CATEGORIES, DIETARY_FILTERS } from "@/lib/data";
-import { useReservation } from "./ReservationContext";
+import { Search, Filter, ShieldAlert, ChevronRight, Loader2 } from "lucide-react";
+import { DIETARY_FILTERS } from "@/lib/data";
+import { getItems } from "@/app/action/item.actions";
+import { useReservation } from "@/components/ReservationContext";
 
 export default function MenuBrowser() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "All";
+
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState("");
   const [dietaryFilter, setDietaryFilter] = useState("All");
   const { openReservation } = useReservation();
 
-  const filteredItems = MENU_DATA.filter((item) => {
+  // MongoDB theke data load (server action call)
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      try {
+        const data = await getItems();
+        if (active) setItems(data);
+      } catch (err) {
+        if (active) setError("Menu load kora gelo na. Abar try korun.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Category list DB er item theke auto toiri
+  const categories = useMemo(
+    () => ["All", ...new Set(items.map((i) => i.category))],
+    [items]
+  );
+
+  const filteredItems = items.filter((item) => {
     const matchesCategory =
       selectedCategory === "All" || item.category === selectedCategory;
     const matchesSearch =
@@ -34,7 +66,6 @@ export default function MenuBrowser() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4">
           <div className="flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
-            
             {/* Search Input */}
             <div className="relative w-full md:w-80">
               <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
@@ -47,7 +78,7 @@ export default function MenuBrowser() {
               />
             </div>
 
-            {/* Dietary Filters (Horizontal Scroll on Mobile) */}
+            {/* Dietary Filters */}
             <div className="flex items-center space-x-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
               <span className="text-xs text-slate-400 font-medium mr-1 sm:mr-2 flex items-center shrink-0">
                 <Filter className="w-3.5 h-3.5 mr-1 text-amber-400" /> Dietary:
@@ -70,7 +101,7 @@ export default function MenuBrowser() {
 
           {/* Categories Bar */}
           <div className="flex space-x-2 overflow-x-auto pt-2 border-t border-slate-800/80 scrollbar-none">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -89,7 +120,17 @@ export default function MenuBrowser() {
 
       {/* Dishes Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-12">
-        {filteredItems.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400 mr-3" />
+            <span className="text-sm">Loading menu...</span>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 sm:py-16 bg-slate-900/40 rounded-2xl border border-slate-800 px-4">
+            <ShieldAlert className="w-9 h-9 sm:w-10 sm:h-10 text-red-400 mx-auto mb-3 opacity-70" />
+            <p className="text-slate-300 text-sm">{error}</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="text-center py-12 sm:py-16 bg-slate-900/40 rounded-2xl border border-slate-800 px-4">
             <ShieldAlert className="w-9 h-9 sm:w-10 sm:h-10 text-amber-400 mx-auto mb-3 opacity-60" />
             <h3 className="text-base sm:text-lg font-bold text-white">
@@ -109,12 +150,14 @@ export default function MenuBrowser() {
               >
                 {/* Dish Image */}
                 <div className="w-full sm:w-36 h-44 sm:h-36 rounded-xl overflow-hidden shrink-0 relative bg-slate-950">
-                  <img
-                    src={dish.image}
-                    alt={dish.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  {dish.image && (
+                    <img
+                      src={dish.image}
+                      alt={dish.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
                   {dish.badge && (
                     <span className="absolute top-2 left-2 bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-0.5 rounded shadow">
                       {dish.badge}
@@ -151,7 +194,10 @@ export default function MenuBrowser() {
                         </span>
                       ))}
                       {dish.allergens.length > 0 && (
-                        <span className="text-[10px] text-slate-400 truncate max-w-[180px] sm:max-w-xs" title={`Contains: ${dish.allergens.join(", ")}`}>
+                        <span
+                          className="text-[10px] text-slate-400 truncate max-w-[180px] sm:max-w-xs"
+                          title={`Contains: ${dish.allergens.join(", ")}`}
+                        >
                           Contains: {dish.allergens.join(", ")}
                         </span>
                       )}

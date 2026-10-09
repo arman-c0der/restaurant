@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useId } from "react";
+import { useState, useEffect, useRef, useId, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Sparkles, Check } from "lucide-react";
+import { X, Sparkles, Check, Loader2 } from "lucide-react";
 import { useReservation } from "./ReservationContext";
-
-const TIME_SLOTS = ["12:30", "13:00", "18:00", "19:00", "20:00", "21:00"];
-
-// Full time slots per date, e.g. { "2026-10-10": ["19:00", "20:00"] }.
-// Later you can fill this from your backend.
-const UNAVAILABLE_SLOTS = {};
+import ReservationCalendar from "./ReservationCalender";
+import { getBookedSlots, createReservation } from "@/app/action/reservation.actions";
+import { TIME_SLOTS, MAX_GUESTS } from "@/lib/reservationConfig";
 
 const INITIAL_FORM = {
   name: "",
@@ -23,13 +20,22 @@ const INITIAL_FORM = {
 const INPUT_CLASS =
   "w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/40";
 
-// Today's date in the user's LOCAL timezone (YYYY-MM-DD).
-// toISOString() uses UTC, which can be off by one day.
+const pad = (n) => String(n).padStart(2, "0");
+
+// User er local date (YYYY-MM-DD)
 function getToday() {
   const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${month}-${day}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function formatDate(key) {
+  if (!key) return "";
+  return new Date(key + "T00:00:00").toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 const FOCUSABLE =
@@ -40,6 +46,16 @@ export default function ReservationModal() {
   const [step, setStep] = useState(1);
   const [refNum, setRefNum] = useState("");
   const [formData, setFormData] = useState(INITIAL_FORM);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Calendar state
+  const [view, setView] = useState(() => {
+    const n = new Date();
+    return { y: n.getFullYear(), m: n.getMonth() };
+  });
+  const [bookedByMonth, setBookedByMonth] = useState({}); // { "2026-10": { date: [slots] } }
+  const [loadingAvail, setLoadingAvail] = useState(false);
 
   const dialogRef = useRef(null);
   const previouslyFocused = useRef(null);
@@ -52,37 +68,92 @@ export default function ReservationModal() {
     email: `${uid}-email`,
     phone: `${uid}-phone`,
     guests: `${uid}-guests`,
-    date: `${uid}-date`,
     time: `${uid}-time`,
   };
 
-  const takenSlots = UNAVAILABLE_SLOTS[formData.date] ?? [];
+  const today = getToday();
+  const monthKey = `${view.y}-${pad(view.m + 1)}`;
+  const selectedMonthKey = formData.date.slice(0, 7);
+  const takenSlots = bookedByMonth[selectedMonthKey]?.[formData.date] ?? [];
+  const takenKey = takenSlots.join(",");
+  const dateFullyBooked = formData.date && takenSlots.length >= TIME_SLOTS.length;
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  // Server theke ei month er full slot gulo ana
+  const loadAvailability = useCallback(async () => {
+    const last = new Date(view.y, view.m + 1, 0).getDate();
+    const from = `${monthKey}-01`;
+    const to = `${monthKey}-${pad(last)}`;
+    setLoadingAvail(true);
+    try {
+      const data = await getBookedSlots(from, to);
+      setBookedByMonth((prev) => ({ ...prev, [monthKey]: data }));
+    } catch {
+      /* availability na ashle-o form kaj korbe, server abar check kore */
+    } finally {
+      setLoadingAvail(false);
+    }
+  }, [view.y, view.m, monthKey]);
 
-    // Safety check in case the selected slot is full.
-    if (takenSlots.includes(formData.time)) return;
+  useEffect(() => {
+    if (isOpen) loadAvailability();
+  }, [isOpen, loadAvailability]);
 
-    // TODO: send formData to your backend here and use the reference
-    // number returned by the server instead of generating one locally.
-    setRefNum("BK-" + Math.floor(100000 + Math.random() * 900000));
-    setStep(2);
+  // Selected time full hoye gele prothom khali slot e shoriye dao
+  useEffect(() => {
+    if (!formData.date) return;
+    if (takenSlots.includes(formData.time) || !formData.time) {
+      const free = TIME_SLOTS.find((t) => !takenSlots.includes(t));
+      setFormData((f) => ({ ...f, time: free || "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.date, takenKey]);
+
+  function navigate(delta) {
+    setView((v) => {
+      const d = new Date(v.y, v.m + delta, 1);
+      return { y: d.getFullYear(), m: d.getMonth() };
+    });
   }
 
-  // Only closes. Form state is reset in onExitComplete,
-  // after the exit animation has finished.
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+
+    if (!formData.date) return setError("Please select a date from the calendar.");
+    if (!formData.time)
+      return setError("This date is fully booked. Please choose another date.");
+
+    setSubmitting(true);
+    try {
+      const res = await createReservation(formData);
+      if (res?.ok) {
+        setRefNum(res.reference);
+        setStep(2);
+        loadAvailability();
+      } else {
+        setError(res?.error || "Booking failed. Please try again.");
+        loadAvailability(); // slot full hole calendar update hoye jabe
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function handleClose() {
     closeReservation();
   }
 
   function resetForm() {
+    const n = new Date();
     setStep(1);
     setFormData(INITIAL_FORM);
     setRefNum("");
+    setError("");
+    setView({ y: n.getFullYear(), m: n.getMonth() });
   }
 
-  // Esc key closes the modal.
   useEffect(() => {
     if (!isOpen) return;
     function onKeyDown(e) {
@@ -92,7 +163,6 @@ export default function ReservationModal() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [isOpen, closeReservation]);
 
-  // Lock background scroll while the modal is open.
   useEffect(() => {
     if (!isOpen) return;
     const original = document.body.style.overflow;
@@ -102,7 +172,6 @@ export default function ReservationModal() {
     };
   }, [isOpen]);
 
-  // Move focus into the modal on open, and restore it on close.
   useEffect(() => {
     if (!isOpen) return;
     previouslyFocused.current = document.activeElement;
@@ -116,7 +185,6 @@ export default function ReservationModal() {
     };
   }, [isOpen]);
 
-  // Focus trap: keep Tab / Shift+Tab inside the dialog.
   function handleDialogKeyDown(e) {
     if (e.key !== "Tab" || !dialogRef.current) return;
     const items = Array.from(dialogRef.current.querySelectorAll(FOCUSABLE));
@@ -134,7 +202,6 @@ export default function ReservationModal() {
     }
   }
 
-  // Move focus to the Close button on the confirmation step.
   useEffect(() => {
     if (isOpen && step === 2) {
       dialogRef.current?.querySelector("[data-close-main]")?.focus();
@@ -183,23 +250,17 @@ export default function ReservationModal() {
                     Table Booking
                   </span>
                 </div>
-                <h2
-                  id={ids.title}
-                  className="text-2xl font-serif font-bold text-white mb-2"
-                >
+                <h2 id={ids.title} className="text-2xl font-serif font-bold text-white mb-2">
                   Reserve Your Table
                 </h2>
                 <p id={ids.desc} className="text-sm text-slate-400 mb-6">
-                  Complete the details below to secure your dining reservation.
+                  Pick an available date from the calendar to secure your table.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4 text-sm">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label
-                        htmlFor={ids.name}
-                        className="block text-slate-300 font-medium mb-1"
-                      >
+                      <label htmlFor={ids.name} className="block text-slate-300 font-medium mb-1">
                         Full Name *
                       </label>
                       <input
@@ -209,17 +270,12 @@ export default function ReservationModal() {
                         autoComplete="name"
                         required
                         value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className={INPUT_CLASS}
                       />
                     </div>
                     <div>
-                      <label
-                        htmlFor={ids.email}
-                        className="block text-slate-300 font-medium mb-1"
-                      >
+                      <label htmlFor={ids.email} className="block text-slate-300 font-medium mb-1">
                         Email Address *
                       </label>
                       <input
@@ -229,9 +285,7 @@ export default function ReservationModal() {
                         autoComplete="email"
                         required
                         value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className={INPUT_CLASS}
                       />
                     </div>
@@ -239,10 +293,7 @@ export default function ReservationModal() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label
-                        htmlFor={ids.phone}
-                        className="block text-slate-300 font-medium mb-1"
-                      >
+                      <label htmlFor={ids.phone} className="block text-slate-300 font-medium mb-1">
                         Phone Number *
                       </label>
                       <input
@@ -255,28 +306,21 @@ export default function ReservationModal() {
                         pattern="[0-9+()\s\-]{7,20}"
                         title="Enter a valid phone number (7-20 digits; + ( ) - allowed)"
                         value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         className={INPUT_CLASS}
                       />
                     </div>
                     <div>
-                      <label
-                        htmlFor={ids.guests}
-                        className="block text-slate-300 font-medium mb-1"
-                      >
+                      <label htmlFor={ids.guests} className="block text-slate-300 font-medium mb-1">
                         Number of Guests
                       </label>
                       <select
                         id={ids.guests}
                         value={formData.guests}
-                        onChange={(e) =>
-                          setFormData({ ...formData, guests: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, guests: e.target.value })}
                         className={INPUT_CLASS}
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                        {Array.from({ length: MAX_GUESTS }, (_, i) => i + 1).map((n) => (
                           <option key={n} value={n}>
                             {n} {n === 1 ? "Guest" : "Guests"}
                           </option>
@@ -285,60 +329,79 @@ export default function ReservationModal() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor={ids.date}
-                        className="block text-slate-300 font-medium mb-1"
-                      >
-                        Date *
-                      </label>
-                      <input
-                        id={ids.date}
-                        type="date"
-                        required
-                        min={getToday()}
-                        value={formData.date}
-                        onChange={(e) =>
-                          setFormData({ ...formData, date: e.target.value })
-                        }
-                        className={INPUT_CLASS}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={ids.time}
-                        className="block text-slate-300 font-medium mb-1"
-                      >
-                        Time Slot *
-                      </label>
-                      <select
-                        id={ids.time}
-                        required
-                        value={formData.time}
-                        onChange={(e) =>
-                          setFormData({ ...formData, time: e.target.value })
-                        }
-                        className={INPUT_CLASS}
-                      >
-                        {TIME_SLOTS.map((t) => {
-                          const taken = takenSlots.includes(t);
-                          return (
-                            <option key={t} value={t} disabled={taken}>
-                              {t}
-                              {taken ? " (Full)" : ""}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
+                  {/* Calendar */}
+                  <div>
+                    <p className="block text-slate-300 font-medium mb-1">Date *</p>
+                    <ReservationCalendar
+                      year={view.y}
+                      month={view.m}
+                      booked={bookedByMonth[monthKey] || {}}
+                      selected={formData.date}
+                      today={today}
+                      loading={loadingAvail}
+                      onSelect={(key) => setFormData({ ...formData, date: key })}
+                      onNavigate={navigate}
+                    />
+                    {formData.date && (
+                      <p className="mt-2 text-xs text-amber-300">
+                        Selected: {formatDate(formData.date)}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Time slots */}
+                  <div>
+                    <p id={ids.time} className="block text-slate-300 font-medium mb-1">
+                      Time Slot *
+                    </p>
+                    <div role="group" aria-labelledby={ids.time} className="grid grid-cols-3 gap-2">
+                      {TIME_SLOTS.map((t) => {
+                        const taken = takenSlots.includes(t);
+                        const active = formData.time === t;
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            disabled={taken}
+                            aria-pressed={active}
+                            onClick={() => setFormData({ ...formData, time: t })}
+                            className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed ${
+                              active
+                                ? "border-amber-500 bg-amber-500 text-slate-950 font-bold"
+                                : taken
+                                ? "border-red-500/20 bg-red-500/10 text-red-400/70 line-through"
+                                : "border-slate-800 bg-slate-950 text-slate-200 hover:border-amber-500/50"
+                            }`}
+                          >
+                            {t}
+                            {taken && <span className="block text-[10px] no-underline">Full</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {dateFullyBooked && (
+                      <p className="mt-2 text-xs text-red-400">
+                        This date is fully booked. Please choose another date.
+                      </p>
+                    )}
+                  </div>
+
+                  {error && (
+                    <p
+                      role="alert"
+                      className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm text-red-400"
+                    >
+                      {error}
+                    </p>
+                  )}
 
                   <button
                     type="submit"
-                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-lg mt-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                    disabled={submitting || dateFullyBooked}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-lg mt-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Confirm Booking Request
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {submitting ? "Booking..." : "Confirm Booking Request"}
                   </button>
                 </form>
               </div>
@@ -347,20 +410,23 @@ export default function ReservationModal() {
                 <div className="w-16 h-16 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Check className="w-8 h-8" aria-hidden="true" />
                 </div>
-                <h3
-                  id={ids.title}
-                  className="text-2xl font-serif font-bold text-white mb-2"
-                >
+                <h3 id={ids.title} className="text-2xl font-serif font-bold text-white mb-2">
                   Booking Request Received
                 </h3>
-                <p id={ids.desc} className="text-slate-300 text-sm mb-6">
+                <p id={ids.desc} className="text-slate-300 text-sm mb-2">
                   Thank you {formData.name}. Your booking reference is:
                 </p>
-                <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl mb-6 font-mono text-amber-400 font-bold text-lg">
+                <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl mb-4 font-mono text-amber-400 font-bold text-lg">
                   {refNum}
                 </div>
+                <p className="text-slate-300 text-sm mb-1">
+                  {formatDate(formData.date)} at {formData.time}
+                </p>
+                <p className="text-slate-300 text-sm mb-6">
+                  {formData.guests} {Number(formData.guests) === 1 ? "guest" : "guests"}
+                </p>
                 <p className="text-slate-500 text-xs mb-6">
-                  This is a demo booking form — no table has actually been held.
+                  Our team will confirm your booking shortly. Please keep your reference number.
                 </p>
                 <button
                   type="button"

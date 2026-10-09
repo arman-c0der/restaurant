@@ -31,7 +31,7 @@ export default function Navbar() {
         
         {/* Brand Logo */}
         <Link href="/" className="flex items-center focus:outline-none group" aria-label="Home">
-          <BrandLogo className="w-12 h-12 group-hover:scale-105 transition-transform" />
+          <BrandLogo className="w-16 h-16 group-hover:scale-105 transition-transform" />
         </Link>
 
         {/* Desktop Navigation (Medium and Large Screens) */}
@@ -39,21 +39,22 @@ export default function Navbar() {
           {NAV_LINKS.map((link) => {
             const active = pathname === link.href;
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative py-1 transition-colors ${
-                  active ? "text-amber-400 font-semibold" : "text-slate-300 hover:text-amber-300"
-                }`}
-              >
-                {link.label}
-                {active && (
-                  <motion.div
-                    layoutId="activeNavTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"
-                  />
-                )}
-              </Link>
+             <Link
+  key={link.href}
+  href={link.href}
+  className={`group relative py-1 transition-colors ${
+     "text-slate-300 hover:text-amber-300"
+  }`}
+>
+  {link.label}
+
+  {/* Bottom border: middle theke dui dike expand hobe */}
+  <span
+    className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-amber-400
+      origin-center transition-transform duration-300 ease-out
+      ${"scale-x-0 group-hover:scale-x-100"}`}
+  />
+</Link>
             );
           })}
         </nav>

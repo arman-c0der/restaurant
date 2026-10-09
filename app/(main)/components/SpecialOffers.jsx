@@ -1,6 +1,6 @@
 "use client";
 
-import { useReservation } from "./ReservationContext";
+import { useReservation } from "../../../components/ReservationContext";
 
 export default function SpecialOffers() {
   const { openReservation } = useReservation();

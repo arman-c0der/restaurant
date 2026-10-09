@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useId } from "react";
-import { Instagram, Facebook } from "lucide-react";
+import { FaFacebook, FaInstagram } from "react-icons/fa";
 import BrandLogo from "./BrandLogo";
 
 const NAV_LINKS = [
@@ -14,8 +14,8 @@ const NAV_LINKS = [
 
 // TODO: replace "#" with your real social media URLs.
 const SOCIAL_LINKS = [
-  { Icon: Instagram, label: "Instagram", href: "https://www.instagram.com/thecheeekychef/" },
-  { Icon: Facebook, label: "Facebook", href: "https://www.facebook.com/716550254867830?ref=PROFILE_EDIT_xav_ig_profile_page_web" },
+  { Icon: FaInstagram, label: "Instagram", href: "https://www.instagram.com" },
+  { Icon: FaFacebook, label: "Facebook", href: "https://www.facebook.com" },
 ];
 
 const HOURS = [
@@ -49,7 +49,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="space-y-4">
-            <BrandLogo className="w-12 h-12" />
+            <BrandLogo className="w-16 h-16" />
             <p className="text-slate-400 leading-relaxed">
            188 Ryrie st, Geelong, VIC, Australia, 3220
             </p>
